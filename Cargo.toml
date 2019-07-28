@@ -6,6 +6,5 @@ authors = ["ct0r <ct0r@protonmail.com>"]
 edition = "2018"
 license = "MIT"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
+serde_json = "1.0"
