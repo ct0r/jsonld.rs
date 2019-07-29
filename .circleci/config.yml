@@ -1,0 +1,36 @@
+version: 2.1
+
+jobs:
+  build-app:
+    docker:
+      - image: rust:slim
+    steps:
+      - checkout
+      - restore_cache:
+          key: cache
+      - run: rustup component add rustfmt
+      - run: cargo fmt -- --check
+      - run: cargo build
+      - run: cargo test
+      - save_cache:
+          key: cache
+          paths:
+            - ~/.cargo
+            - ./target
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - build-app
+
+  nigthly:
+    triggers:
+      - schedule:
+          cron: 0 3 * * *
+          filters:
+             branches:
+               only:
+                 - master
+    jobs:
+      - build-app
