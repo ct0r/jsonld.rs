@@ -1,9 +1,4 @@
-pub struct JsonLdError {
-    pub code: JsonLdErrorCode,
-    pub message: Option<String>,
-}
-
-pub enum JsonLdErrorCode {
+pub enum JsonLdError {
     CollidingKeywords,
     ConflictingIndexes,
     CyclicIRIMapping,
