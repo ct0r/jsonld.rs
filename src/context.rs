@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 use serde_json::Value;
 use url::Url;
@@ -102,9 +102,9 @@ impl Context {
                     }
 
                     // 5.8
-                    if let Some(vocab) = map.get("@vocab") {
+                    if let Some(value) = map.get("@vocab") {
                         // 5.8.1
-                        match vocab {
+                        match value {
                             // 5.8.2
                             Value::Null => self.vocab = None,
 
@@ -120,6 +120,20 @@ impl Context {
                             _ => return Err(JsonLdError::InvalidVocabMapping),
                         }
                     }
+
+                    // 5.9
+                    // 5.9.1
+                    if let Some(value) = map.get("@language") {
+                        match value {
+                            // 5.9.2
+                            Value::Null => self.vocab = None,
+
+                            // 5.9.3
+                            Value::String(s) => self.vocab = Some(s.to_lowercase()),
+
+                            _ => return Err(JsonLdError::InvalidDefaultLanguage),
+                        }
+                    }
                 }
 
                 // 5.3
@@ -130,6 +144,8 @@ impl Context {
         Ok(self)
     }
 }
+
+fn expand_iri() {}
 
 fn is_absolute_iri(iri: &String) -> bool {
     unimplemented!();
