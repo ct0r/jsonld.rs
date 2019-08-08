@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, HashMap};
 
-use serde_json::Value;
+use serde_json::{ Map, Value };
 use url::Url;
 
 use super::{JsonLdError, JsonLdOptions};
@@ -134,6 +134,18 @@ impl Context {
                             _ => return Err(JsonLdError::InvalidDefaultLanguage),
                         }
                     }
+
+                    // 5.11
+                    let defined: HashMap<String, bool> = HashMap::new();
+
+                    // 5.12
+                    for term in map.keys() {
+                        if term == "@base" || term == "@vocab" || term == "@language" {
+                            continue;
+                        };
+
+                        self.create_term_definition(&map, term, &defined);
+                    }
                 }
 
                 // 5.3
@@ -142,6 +154,15 @@ impl Context {
         }
 
         Ok(self)
+    }
+
+    fn create_term_definition(
+        &mut self,
+        local_context: &Map<String, Value>,
+        term: &String,
+        defined: &HashMap<String, bool>,
+    ) {
+        
     }
 }
 
