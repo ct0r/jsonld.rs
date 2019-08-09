@@ -37,7 +37,7 @@ pub enum JsonLdError {
     InvalidValueObjectValue,
     InvalidVocabMapping,
     IRIConfusedWithPrefix,
-    KeywordRedeFinition,
+    KeywordRedefinition,
     LoadingDocumentFailed,
     LoadingRemoteContextFailed,
     MultipleContextLinkHeaders,

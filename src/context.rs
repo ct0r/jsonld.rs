@@ -1,9 +1,30 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
-use serde_json::{ Map, Value };
+use serde_json::{Map, Value};
 use url::Url;
 
 use super::{JsonLdError, JsonLdOptions};
+
+lazy_static! {
+    static ref KEYWORDS: HashSet<&'static str> = [
+        "@base",
+        "@container",
+        "@context",
+        "@graph",
+        "@id",
+        "@index",
+        "@language",
+        "@list",
+        "@reverse",
+        "@set",
+        "@type",
+        "@value",
+        "@vocab",
+    ]
+    .iter()
+    .cloned()
+    .collect();
+}
 
 #[derive(Clone)]
 pub struct Context {
@@ -136,7 +157,7 @@ impl Context {
                     }
 
                     // 5.11
-                    let defined: HashMap<String, bool> = HashMap::new();
+                    let mut defined: HashMap<String, bool> = HashMap::new();
 
                     // 5.12
                     for term in map.keys() {
@@ -144,7 +165,7 @@ impl Context {
                             continue;
                         };
 
-                        self.create_term_definition(&map, term, &defined);
+                        self.create_term_definition(&map, term, &mut defined)?;
                     }
                 }
 
@@ -159,10 +180,41 @@ impl Context {
     fn create_term_definition(
         &mut self,
         local_context: &Map<String, Value>,
-        term: &String,
-        defined: &HashMap<String, bool>,
-    ) {
-        
+        term: &str,
+        defined: &mut HashMap<String, bool>,
+    ) -> Result<(), JsonLdError> {
+        // 1
+        if let Some(v) = defined.get(term) {
+            match v {
+                true => return Ok(()),
+                false => return Err(JsonLdError::CyclicIRIMapping),
+            }
+        }
+
+        // 2
+        defined.insert(term.to_owned(), false);
+
+        // 3
+        let value = local_context.get(term).unwrap();
+
+        // 5
+        if KEYWORDS.contains(term) {
+            return Err(JsonLdError::KeywordRedefinition);
+        }
+
+        // 7
+        self.terms.remove(term);
+
+        // 9
+        match value {
+            Value::String(s) => {
+                let mut map = Map::new();
+                map.insert("@id".to_string(), Value::String(s.to_owned()));
+            }
+            _ => return Err(JsonLdError::InvalidTermDefinition),
+        }
+
+        Ok(())
     }
 }
 
