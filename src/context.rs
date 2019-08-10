@@ -1,30 +1,9 @@
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap};
 
 use serde_json::{Map, Value};
 use url::Url;
 
 use super::{JsonLdError, JsonLdOptions};
-
-lazy_static! {
-    static ref KEYWORDS: HashSet<&'static str> = [
-        "@base",
-        "@container",
-        "@context",
-        "@graph",
-        "@id",
-        "@index",
-        "@language",
-        "@list",
-        "@reverse",
-        "@set",
-        "@type",
-        "@value",
-        "@vocab",
-    ]
-    .iter()
-    .cloned()
-    .collect();
-}
 
 #[derive(Clone)]
 pub struct Context {
@@ -195,30 +174,121 @@ impl Context {
         defined.insert(term.to_owned(), false);
 
         // 3
-        let value = local_context.get(term).unwrap();
+        // let mut value = local_context.get(term).unwrap();
 
         // 5
-        if KEYWORDS.contains(term) {
+        if is_keyword(term) {
             return Err(JsonLdError::KeywordRedefinition);
         }
 
         // 7
         self.terms.remove(term);
 
-        // 9
-        match value {
-            Value::String(s) => {
-                let mut map = Map::new();
-                map.insert("@id".to_string(), Value::String(s.to_owned()));
-            }
-            _ => return Err(JsonLdError::InvalidTermDefinition),
-        }
+        // 3 & 9
+        // let value = match local_context.get(term).unwrap() {
+        //     Value::Object(m) => m,
+
+        //     // 9
+        //     Value::String(s) => {
+        //         let mut map: Map<String, Value> = Map::new();
+        //         map.insert("@id".to_string(), Value::String(s.clone()));
+
+        //         map
+        //     }
+
+        //     // 10
+        //     _ => return Err(JsonLdError::InvalidTermDefinition),
+        // };
+
+        // 11
+
+        self.expand_iri("", false, false, local_context, defined);
 
         Ok(())
     }
+
+    fn expand_iri(
+        &mut self,
+        value: &str,
+        relative: bool,
+        vocab: bool,
+        local_context: &Map<String, Value>,
+        defined: &mut HashMap<String, bool>,
+    ) -> Result<Option<String>, JsonLdError> {
+        // 1
+        if is_keyword(value) {
+            return Ok(Some(value.to_string()));
+        }
+
+        // 2
+        if local_context.contains_key(value)
+            && defined.contains_key(value)
+            && !*defined.get(value).unwrap()
+        {
+            self.create_term_definition(local_context, value, defined)?
+        }
+
+        // 4
+        if vocab && self.terms.contains_key(value) {
+            return Ok(match self.terms.get(value).unwrap() {
+                Value::Null => None,
+                Value::Object(m) => Some(m.get("@id").unwrap().to_string()),
+                _ => panic!("should not happen"),
+            });
+        }
+
+        // 5
+        if let Some(i) = value.find(":") {
+            // 5.1
+            let (prefix, suffix) = value.split_at(i);
+
+            // 5.2
+            if prefix == "_" || suffix.starts_with("//") {
+                return Ok(Some(value.to_string()));
+            }
+
+            // 5.3
+            if local_context.contains_key(prefix)
+                && (!defined.contains_key(prefix) || !defined.get(prefix).unwrap())
+            {
+                self.create_term_definition(local_context, prefix, defined)?
+            }
+
+            // 5.4
+            if let Some(v) = self.terms.get(prefix) {
+                let iri_mapping = match v {
+                    Value::Object(m) => m.get("@id").unwrap().to_string(),
+                    _ => panic!("should not happen"),
+                };
+
+                return Ok(Some(iri_mapping + suffix));
+            }
+
+            // 5.5
+            return Ok(Some(value.to_string()));
+        }
+
+        // 6
+        if vocab && self.vocab.is_some() {
+            return Ok(Some(self.vocab.as_ref().unwrap().to_string() + value));
+        } else if relative && self.base.is_some() {
+            return Ok(Some(
+                self.base.as_ref().unwrap().join(value).unwrap().to_string(),
+            ));
+        }
+
+        // 7
+        Ok(Some(value.to_string()))
+    }
 }
 
-fn expand_iri() {}
+fn is_keyword(val: &str) -> bool {
+    return match val {
+        "@container" | "@context" | "@graph" | "@id" | "@index" | "@language" | "@list"
+        | "@reverse" | "@set" | "@type" | "@value" | "@vocab" => true,
+        _ => false,
+    };
+}
 
 fn is_absolute_iri(iri: &String) -> bool {
     unimplemented!();
