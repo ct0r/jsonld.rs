@@ -277,6 +277,30 @@ impl Context {
 
                 // 15
                 definition.insert("@reverse".to_string(), Value::Bool(false));
+
+                // 16
+                if let Some(id) = value.get("id") {
+                    match id {
+                        Value::String(s) => {
+                            if s != term {
+                                // 16.3
+                                let id = self.expand_iri(s, false, true, local_context, defined)?;
+                                if let Some(id) = id {
+                                    if !is_absolute_iri(&id) && !is_keyword(&id) {
+                                        return Err(JsonLdError::InvalidIRIMapping);
+                                    }
+
+                                    definition.insert("@id".to_string(), Value::String(id));
+                                } else {
+                                    return Err(JsonLdError::InvalidIRIMapping);
+                                }
+                            }
+                        },
+                        // 16.2
+                        _ => return Err(JsonLdError::InvalidIRIMapping)
+                    }
+                }
+
             }
             _ => return Err(JsonLdError::InvalidTermDefinition),
         }
