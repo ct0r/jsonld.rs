@@ -4,7 +4,7 @@ pub enum JsonLdError {
     CyclicIRIMapping,
     InvalidIdValue,
     InvalidIndexValue,
-    InvalidNestvalue,
+    InvalidNestValue,
     InvalidPrefixValue,
     InvalidPropagateValue,
     InvalidReverseValue,

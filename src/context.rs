@@ -174,7 +174,7 @@ impl Context {
         defined.insert(term.to_owned(), false);
 
         // 3
-        // let mut value = local_context.get(term).unwrap();
+        let mut value = local_context.get(term).unwrap();
 
         // 5
         if is_keyword(term) {
@@ -184,25 +184,102 @@ impl Context {
         // 7
         self.terms.remove(term);
 
-        // 3 & 9
-        // let value = match local_context.get(term).unwrap() {
-        //     Value::Object(m) => m,
+        // 9
+        let mut tmp_val; // TODO: find out how to give reference to variable with limited scope
+        if let Value::String(s) = value {
+            let mut map: Map<String, Value> = Map::new();
+            map.insert("@id".to_string(), Value::String(s.clone()));
 
-        //     // 9
-        //     Value::String(s) => {
-        //         let mut map: Map<String, Value> = Map::new();
-        //         map.insert("@id".to_string(), Value::String(s.clone()));
+            tmp_val = Value::Object(map);
+            value = &tmp_val;
+        }
 
-        //         map
-        //     }
+        // 10
+        match value {
+            Value::Object(value) => {
+                // 11
+                let mut definition = Map::new();
 
-        //     // 10
-        //     _ => return Err(JsonLdError::InvalidTermDefinition),
-        // };
+                // 13
+                if let Some(t) = value.get("@type") {
+                    // 13.1
+                    match t {
+                        Value::String(t) => {
+                            // 13.2
+                            if let Some(t) =
+                                self.expand_iri(t, false, true, local_context, defined)?
+                            {
+                                if t == "@id" || t == "@vocab" || is_absolute_iri(&t) {
+                                    // 13.3
+                                    definition.insert("@type".to_string(), Value::String(t));
+                                } else {
+                                    return Err(JsonLdError::InvalidTypeMapping);
+                                }
+                            } else {
+                                return Err(JsonLdError::InvalidTypeMapping);
+                            }
+                        }
+                        _ => return Err(JsonLdError::InvalidTypeMapping),
+                    }
+                }
 
-        // 11
+                // 14
+                if let Some(reverse) = value.get("@reverse") {
+                    // 14.1
+                    if value.contains_key("@id") || value.contains_key("@nest") {
+                        return Err(JsonLdError::InvalidReverseProperty);
+                    }
 
-        self.expand_iri("", false, false, local_context, defined);
+                    // 14.2
+                    if let Value::String(reverse) = reverse {
+                        // 14.3
+                        if let Some(id) =
+                            self.expand_iri(reverse, false, true, local_context, defined)?
+                        {
+                            if !is_absolute_iri(&id) {
+                                return Err(JsonLdError::InvalidIRIMapping);
+                            }
+
+                            definition.insert("@id".to_string(), Value::String(id));
+
+                            // 14.4
+                            if let Some(container) = value.get("@container") {
+                                let container = match container {
+                                    Value::Null => Value::Null,
+                                    Value::String(s) => {
+                                        if s == "@set" || s == "@index" {
+                                            Value::String(s.to_string())
+                                        } else {
+                                            return Err(JsonLdError::InvalidReverseProperty);
+                                        }
+                                    }
+                                    _ => return Err(JsonLdError::InvalidReverseProperty),
+                                };
+
+                                definition.insert("@container".to_string(), container);
+                            }
+
+                            // 14.5
+                            definition.insert("@reverse".to_string(), Value::Bool(true));
+
+                            // 14.6
+                            self.terms
+                                .insert(term.to_string(), Value::Object(definition));
+                            defined.insert(term.to_string(), true);
+                            return Ok(());
+                        } else {
+                            return Err(JsonLdError::InvalidIRIMapping);
+                        }
+                    } else {
+                        return Err(JsonLdError::InvalidIRIMapping);
+                    }
+                }
+
+                // 15
+                definition.insert("@reverse".to_string(), Value::Bool(false));
+            }
+            _ => return Err(JsonLdError::InvalidTermDefinition),
+        }
 
         Ok(())
     }
@@ -290,10 +367,10 @@ fn is_keyword(val: &str) -> bool {
     };
 }
 
-fn is_absolute_iri(iri: &String) -> bool {
+fn is_absolute_iri(iri: &str) -> bool {
     unimplemented!();
 }
 
-fn is_relative_iri(iri: &String) -> bool {
+fn is_relative_iri(iri: &str) -> bool {
     unimplemented!();
 }
