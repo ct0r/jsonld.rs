@@ -354,6 +354,17 @@ impl Context {
                         _ => return Err(JsonLdError::InvalidContainerMapping),
                     }
                 }
+
+                // 23
+                if value.contains_key("@language") && !value.contains_key("@type") {
+                    // 23.1
+                    definition_language_mapping = match value.get("@language").unwrap() {
+                        // 23.2
+                        Value::String(s) => Some(s.to_lowercase()),
+                        Value::Null => None,
+                        _ => return Err(JsonLdError::InvalidLanguageMapping),
+                    }
+                }
             }
             _ => return Err(JsonLdError::InvalidTermDefinition),
         }
