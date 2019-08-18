@@ -207,7 +207,7 @@ impl Context {
         match value {
             Value::Object(value) => {
                 // 11
-                let mut definition_iri_mapping: String;
+                let mut definition_iri_mapping = None;
                 let mut definition_reverse: bool;
                 let mut definition_type_mapping = None;
                 let mut definition_language_mapping = None;
@@ -247,7 +247,7 @@ impl Context {
                             return Err(JsonLdError::InvalidIRIMapping);
                         }
 
-                        definition_iri_mapping = id;
+                        definition_iri_mapping = Some(id);
 
                         // 14.4
                         if let Some(container) = value.get("@container") {
@@ -271,7 +271,7 @@ impl Context {
                         self.terms.insert(
                             term.to_string(),
                             Term {
-                                iri_mapping: definition_iri_mapping,
+                                iri_mapping: definition_iri_mapping.unwrap(),
                                 reverse: definition_reverse,
                                 type_mapping: definition_type_mapping,
                                 language_mapping: definition_language_mapping,
@@ -301,7 +301,7 @@ impl Context {
                                     return Err(JsonLdError::InvalidIRIMapping);
                                 }
 
-                                definition_iri_mapping = id;
+                                definition_iri_mapping = Some(id);
                             }
                         }
                         // 16.2
@@ -319,17 +319,17 @@ impl Context {
 
                     // 17.2
                     if let Some(t) = self.terms.get(prefix) {
-                        definition_iri_mapping = t.iri_mapping.clone() + suffix;
+                        definition_iri_mapping = Some(t.iri_mapping.clone() + suffix);
                     }
                     // 17.3
                     else {
-                        definition_iri_mapping = term.to_owned();
+                        definition_iri_mapping = Some(term.to_owned());
                     }
                 }
                 // 19
                 else {
                     definition_iri_mapping = match &self.vocab {
-                        Some(vocab) => vocab.to_owned() + term,
+                        Some(vocab) => Some(vocab.to_owned() + term),
                         None => return Err(JsonLdError::InvalidIRIMapping),
                     }
                 }
@@ -377,6 +377,18 @@ impl Context {
                         return Err(JsonLdError::InvalidTermDefinition);
                     }
                 }
+
+                // 28
+                self.terms.insert(
+                    term.to_owned(),
+                    Term {
+                        iri_mapping: definition_iri_mapping.unwrap(),
+                        reverse: definition_reverse,
+                        type_mapping: definition_type_mapping,
+                        language_mapping: definition_language_mapping,
+                        container_mapping: definition_container_mapping,
+                    },
+                );
             }
             _ => return Err(JsonLdError::InvalidTermDefinition),
         }
