@@ -207,7 +207,7 @@ impl Context {
         match value {
             Value::Object(value) => {
                 // 11
-                let mut definition_iri_mapping:String;
+                let mut definition_iri_mapping: String;
                 let mut definition_reverse: bool;
                 let mut definition_type_mapping = None;
                 let mut definition_language_mapping = None;
@@ -268,13 +268,16 @@ impl Context {
                         definition_reverse = true;
 
                         // 14.6
-                        self.terms.insert(term.to_string(), Term {
+                        self.terms.insert(
+                            term.to_string(),
+                            Term {
                                 iri_mapping: definition_iri_mapping,
                                 reverse: definition_reverse,
                                 type_mapping: definition_type_mapping,
                                 language_mapping: definition_language_mapping,
-                                container_mapping: definition_container_mapping
-                            });
+                                container_mapping: definition_container_mapping,
+                            },
+                        );
 
                         defined.insert(term.to_string(), true);
 
@@ -317,9 +320,17 @@ impl Context {
                     // 17.2
                     if let Some(t) = self.terms.get(prefix) {
                         definition_iri_mapping = t.iri_mapping.clone() + suffix;
-                    } else {
-                        // 17.3
+                    }
+                    // 17.3
+                    else {
                         definition_iri_mapping = term.to_owned();
+                    }
+                }
+                // 19
+                else {
+                    definition_iri_mapping = match &self.vocab {
+                        Some(vocab) => vocab.to_owned() + term,
+                        None => return Err(JsonLdError::InvalidIRIMapping),
                     }
                 }
             }
