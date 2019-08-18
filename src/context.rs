@@ -291,7 +291,7 @@ impl Context {
                 definition_reverse = false;
 
                 // 16
-                if let Some(id) = value.get("id") {
+                if let Some(id) = value.get("@id") {
                     match id {
                         Value::String(s) => {
                             if s != term {
@@ -331,6 +331,27 @@ impl Context {
                     definition_iri_mapping = match &self.vocab {
                         Some(vocab) => vocab.to_owned() + term,
                         None => return Err(JsonLdError::InvalidIRIMapping),
+                    }
+                }
+
+                // 20
+                if let Some(container) = value.get("container") {
+                    match container {
+                        Value::String(s) => {
+                            // 20.1
+                            if s == "@index"
+                                || s == "@language"
+                                || s == "@list"
+                                || s == "@set"
+                                || s == "@type"
+                            {
+                                // 20.3
+                                definition_container_mapping = Some(s.to_owned());
+                            } else {
+                                return Err(JsonLdError::InvalidContainerMapping);
+                            }
+                        }
+                        _ => return Err(JsonLdError::InvalidContainerMapping),
                     }
                 }
             }
