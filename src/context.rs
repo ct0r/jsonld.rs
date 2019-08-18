@@ -365,6 +365,18 @@ impl Context {
                         _ => return Err(JsonLdError::InvalidLanguageMapping),
                     }
                 }
+
+                // 26
+                for key in value.keys() {
+                    if key != "@id"
+                        || key != "@reverse"
+                        || key != "@container"
+                        || key != "@language"
+                        || key != "@type"
+                    {
+                        return Err(JsonLdError::InvalidTermDefinition);
+                    }
+                }
             }
             _ => return Err(JsonLdError::InvalidTermDefinition),
         }
