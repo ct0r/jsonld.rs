@@ -316,10 +316,10 @@ impl Context {
 
                     // 17.2
                     if let Some(t) = self.terms.get(prefix) {
-                        definition_iri_mapping = [
-                            prefix.to_owned(),
-                            t.iri_mapping.clone(),
-                        ].concat();
+                        definition_iri_mapping = t.iri_mapping.clone() + suffix;
+                    } else {
+                        // 17.3
+                        definition_iri_mapping = term.to_owned();
                     }
                 }
             }
